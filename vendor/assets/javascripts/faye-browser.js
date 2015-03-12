@@ -3,7 +3,11 @@
 'use strict';
 
 var Faye = {
+<<<<<<< HEAD
   VERSION:          '1.1.1',
+=======
+  VERSION:          '1.0.0',
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
   BAYEUX_VERSION:   '1.0',
   ID_LENGTH:        160,
@@ -27,10 +31,14 @@ var Faye = {
 
   random: function(bitlength) {
     bitlength = bitlength || this.ID_LENGTH;
+<<<<<<< HEAD
     var maxLength = Math.ceil(bitlength * Math.log(2) / Math.log(36));
     var string = csprng(bitlength, 36);
     while (string.length < maxLength) string = '0' + string;
     return string;
+=======
+    return csprng(bitlength, 36);
+>>>>>>> fixes to make it compatible with faye 1.0.0
   },
 
   validateOptions: function(options, validKeys) {
@@ -368,8 +376,14 @@ Faye.Namespace = Faye.Class({
 (function() {
 'use strict';
 
+<<<<<<< HEAD
 var timeout = setTimeout, defer;
 
+=======
+var timeout = setTimeout;
+
+var defer;
+>>>>>>> fixes to make it compatible with faye 1.0.0
 if (typeof setImmediate === 'function')
   defer = function(fn) { setImmediate(fn) };
 else if (typeof process === 'object' && process.nextTick)
@@ -381,6 +395,7 @@ var PENDING   = 0,
     FULFILLED = 1,
     REJECTED  = 2;
 
+<<<<<<< HEAD
 var RETURN = function(x) { return x },
     THROW  = function(x) { throw  x };
 
@@ -388,6 +403,15 @@ var Promise = function(task) {
   this._state       = PENDING;
   this._onFulfilled = [];
   this._onRejected  = [];
+=======
+var FORWARD = function(x) { return x },
+    BREAK   = function(x) { throw x  };
+
+var Promise = function(task) {
+  this._state     = PENDING;
+  this._callbacks = [];
+  this._errbacks  = [];
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
   if (typeof task !== 'function') return;
   var self = this;
@@ -396,6 +420,7 @@ var Promise = function(task) {
        function(reason) { reject(self, reason) });
 };
 
+<<<<<<< HEAD
 Promise.prototype.then = function(onFulfilled, onRejected) {
   var next = new Promise();
   registerOnFulfilled(this, onFulfilled, next);
@@ -422,10 +447,39 @@ var registerOnRejected = function(promise, onRejected, next) {
     promise._onRejected.push(handler);
   } else if (promise._state === REJECTED) {
     handler(promise._reason);
+=======
+Promise.prototype.then = function(callback, errback) {
+  var self = this;
+  return new Promise(function(fulfill, reject) {
+    var next = {fulfill: fulfill, reject: reject};
+    registerCallback(self, callback, next);
+    registerErrback(self, errback, next);
+  });
+};
+
+var registerCallback = function(promise, callback, next) {
+  if (typeof callback !== 'function') callback = FORWARD;
+  var handler = function(value) { invoke(callback, value, next) };
+  if (promise._state === PENDING) {
+    promise._callbacks.push(handler);
+  } else if (promise._state === FULFILLED) {
+    defer(function() { handler(promise._value) });
+  }
+};
+
+var registerErrback = function(promise, errback, next) {
+  if (typeof errback !== 'function') errback = BREAK;
+  var handler = function(reason) { invoke(errback, reason, next) };
+  if (promise._state === PENDING) {
+    promise._errbacks.push(handler);
+  } else if (promise._state === REJECTED) {
+    defer(function() { handler(promise._reason) });
+>>>>>>> fixes to make it compatible with faye 1.0.0
   }
 };
 
 var invoke = function(fn, value, next) {
+<<<<<<< HEAD
   defer(function() { _invoke(fn, value, next) });
 };
 
@@ -476,11 +530,35 @@ var _fulfill = function(promise, value) {
 
   var onFulfilled = promise._onFulfilled, fn;
   while (fn = onFulfilled.shift()) fn(value);
+=======
+  try {
+    var outcome = fn(value);
+    if (outcome && typeof outcome.then === 'function') {
+      outcome.then(next.fulfill, next.reject);
+    } else {
+      next.fulfill(outcome);
+    }
+  } catch (error) {
+    next.reject(error);
+  }
+};
+
+var fulfill = Promise.fulfill = function(promise, value) {
+  if (promise._state !== PENDING) return;
+
+  promise._state    = FULFILLED;
+  promise._value    = value;
+  promise._errbacks = [];
+
+  var callbacks = promise._callbacks, cb;
+  while (cb = callbacks.shift()) cb(value);
+>>>>>>> fixes to make it compatible with faye 1.0.0
 };
 
 var reject = Promise.reject = function(promise, reason) {
   if (promise._state !== PENDING) return;
 
+<<<<<<< HEAD
   promise._state       = REJECTED;
   promise._reason      = reason;
   promise._onFulfilled = [];
@@ -504,21 +582,41 @@ Promise.all = function(promises) {
       }, reject);
     })(promises[i], i);
   });
+=======
+  promise._state     = REJECTED;
+  promise._reason    = reason;
+  promise._callbacks = [];
+
+  var errbacks = promise._errbacks, eb;
+  while (eb = errbacks.shift()) eb(reason);
+>>>>>>> fixes to make it compatible with faye 1.0.0
 };
 
 Promise.defer = defer;
 
+<<<<<<< HEAD
 Promise.deferred = Promise.pending = function() {
   var tuple = {};
 
   tuple.promise = new Promise(function(fulfill, reject) {
     tuple.fulfill = tuple.resolve = fulfill;
+=======
+Promise.pending = function() {
+  var tuple = {};
+
+  tuple.promise = new Promise(function(fulfill, reject) {
+    tuple.fulfill = fulfill;
+>>>>>>> fixes to make it compatible with faye 1.0.0
     tuple.reject  = reject;
   });
   return tuple;
 };
 
+<<<<<<< HEAD
 Promise.fulfilled = Promise.resolved = function(value) {
+=======
+Promise.fulfilled = function(value) {
+>>>>>>> fixes to make it compatible with faye 1.0.0
   return new Promise(function(fulfill, reject) { fulfill(value) });
 };
 
@@ -775,7 +873,11 @@ Faye.Deferrable = {
   setDeferredStatus: function(status, value) {
     if (this._timer) Faye.ENV.clearTimeout(this._timer);
 
+<<<<<<< HEAD
     this.then();
+=======
+    var promise = this.then();
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
     if (status === 'succeeded')
       this._fulfill(value);
@@ -854,9 +956,15 @@ Faye.Logging = {
   writeLog: function(messageArgs, level) {
     if (!Faye.logger) return;
 
+<<<<<<< HEAD
     var args   = Array.prototype.slice.apply(messageArgs),
         banner = '[Faye',
         klass  = this.className,
+=======
+    var messageArgs = Array.prototype.slice.apply(messageArgs),
+        banner      = '[Faye',
+        klass       = this.className,
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
         message = args.shift().replace(/\?/g, function() {
           try {
@@ -1062,8 +1170,24 @@ Faye.extend(Faye.Channel, {
   })
 });
 
+<<<<<<< HEAD
 Faye.Publication = Faye.Class(Faye.Deferrable);
 
+=======
+Faye.Envelope = Faye.Class({
+  initialize: function(message, timeout) {
+    this.id      = message.id;
+    this.message = message;
+
+    if (timeout !== undefined) this.timeout(timeout / 1000, false);
+  }
+});
+
+Faye.extend(Faye.Envelope.prototype, Faye.Deferrable);
+
+Faye.Publication = Faye.Class(Faye.Deferrable);
+
+>>>>>>> fixes to make it compatible with faye 1.0.0
 Faye.Subscription = Faye.Class({
   initialize: function(client, channels, callback, context) {
     this._client    = client;
@@ -1096,20 +1220,46 @@ Faye.Client = Faye.Class({
   RETRY:              'retry',
   NONE:               'none',
 
+<<<<<<< HEAD
   CONNECTION_TIMEOUT: 60,
 
   DEFAULT_ENDPOINT:   '/bayeux',
   INTERVAL:           0,
+=======
+  CONNECTION_TIMEOUT:   60,
+  DEFAULT_RETRY:        5,
+  MAX_REQUEST_SIZE:     2048,
+
+  DEFAULT_ENDPOINT:     '/bayeux',
+  INTERVAL:             0,
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
   initialize: function(endpoint, options) {
     this.info('New client created for ?', endpoint);
     options = options || {};
 
+<<<<<<< HEAD
     Faye.validateOptions(options, ['interval', 'timeout', 'endpoints', 'proxy', 'retry', 'scheduler', 'websocketExtensions', 'tls', 'ca']);
 
     this._endpoint   = endpoint || this.DEFAULT_ENDPOINT;
     this._channels   = new Faye.Channel.Set();
     this._dispatcher = new Faye.Dispatcher(this, this._endpoint, options);
+=======
+    this._options   = options || {};
+    this.endpoint   = Faye.URI.parse(endpoint || this.DEFAULT_ENDPOINT);
+    this.endpoints  = this._options.endpoints || {};
+    this.transports = {};
+    this.cookies    = Faye.CookieJar && new Faye.CookieJar();
+    this.headers    = {};
+    this.ca         = this._options.ca;
+    this._disabled  = [];
+    this._retry     = this._options.retry || this.DEFAULT_RETRY;
+
+    for (var key in this.endpoints)
+      this.endpoints[key] = Faye.URI.parse(this.endpoints[key]);
+
+    this.maxRequestSize = this.MAX_REQUEST_SIZE;
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
     this._messageId = 0;
     this._state     = this.UNCONNECTED;
@@ -1123,8 +1273,11 @@ Faye.Client = Faye.Class({
     };
     this._dispatcher.timeout = this._advice.timeout / 1000;
 
+<<<<<<< HEAD
     this._dispatcher.bind('message', this._receiveMessage, this);
 
+=======
+>>>>>>> fixes to make it compatible with faye 1.0.0
     if (Faye.Event && Faye.ENV.onbeforeunload !== undefined)
       Faye.Event.on(Faye.ENV, 'beforeunload', function() {
         if (Faye.indexOf(this._dispatcher._disabled, 'autodisconnect') < 0)
@@ -1132,6 +1285,7 @@ Faye.Client = Faye.Class({
       }, this);
   },
 
+<<<<<<< HEAD
   addWebsocketExtension: function(extension) {
     return this._dispatcher.addWebsocketExtension(extension);
   },
@@ -1142,6 +1296,14 @@ Faye.Client = Faye.Class({
 
   setHeader: function(name, value) {
     return this._dispatcher.setHeader(name, value);
+=======
+  disable: function(feature) {
+    this._disabled.push(feature);
+  },
+
+  setHeader: function(name, value) {
+    this.headers[name] = value;
+>>>>>>> fixes to make it compatible with faye 1.0.0
   },
 
   // Request
@@ -1170,6 +1332,7 @@ Faye.Client = Faye.Class({
     this._state = this.CONNECTING;
     var self = this;
 
+<<<<<<< HEAD
     this.info('Initiating handshake with ?', Faye.URI.stringify(this._endpoint));
     this._dispatcher.selectTransport(Faye.MANDATORY_CONNECTION_TYPES);
 
@@ -1177,6 +1340,15 @@ Faye.Client = Faye.Class({
       channel:                  Faye.Channel.HANDSHAKE,
       version:                  Faye.BAYEUX_VERSION,
       supportedConnectionTypes: this._dispatcher.getConnectionTypes()
+=======
+    this.info('Initiating handshake with ?', Faye.URI.stringify(this.endpoint));
+    this._selectTransport(Faye.MANDATORY_CONNECTION_TYPES);
+
+    this._send({
+      channel:                  Faye.Channel.HANDSHAKE,
+      version:                  Faye.BAYEUX_VERSION,
+      supportedConnectionTypes: [this._transport.connectionType]
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
     }, {}, function(response) {
 
@@ -1249,6 +1421,7 @@ Faye.Client = Faye.Class({
     this.info('Disconnecting ?', this._dispatcher.clientId);
     var promise = new Faye.Publication();
 
+<<<<<<< HEAD
     this._sendMessage({
       channel:  Faye.Channel.DISCONNECT,
       clientId: this._dispatcher.clientId
@@ -1260,6 +1433,16 @@ Faye.Client = Faye.Class({
       } else {
         promise.setDeferredStatus('failed', Faye.Error.parse(response.error));
       }
+=======
+    this._send({
+      channel:  Faye.Channel.DISCONNECT,
+      clientId: this._clientId
+
+    }, function(response) {
+      if (!response.successful) return;
+      this._transport.close();
+      delete this._transport;
+>>>>>>> fixes to make it compatible with faye 1.0.0
     }, this);
 
     this.info('Clearing channel listeners for ?', this._dispatcher.clientId);
@@ -1372,7 +1555,16 @@ Faye.Client = Faye.Class({
         data:     data,
         clientId: this._dispatcher.clientId
 
+<<<<<<< HEAD
       }, options, function(response) {
+=======
+      this._send({
+        channel:  channel,
+        data:     data,
+        clientId: this._clientId
+
+      }, function(response) {
+>>>>>>> fixes to make it compatible with faye 1.0.0
         if (response.successful)
           publication.setDeferredStatus('succeeded');
         else
@@ -1496,14 +1688,28 @@ Faye.Dispatcher = Faye.Class({
     return this._alternates[connectionType] || this.endpoint;
   },
 
+<<<<<<< HEAD
   addWebsocketExtension: function(extension) {
     this.wsExtensions.push(extension);
   },
+=======
+  receiveMessage: function(message) {
+    var id = message.id, timeout, callback;
+
+    if (message.successful !== undefined) {
+      callback = this._responseCallbacks[id];
+      delete this._responseCallbacks[id];
+    }
+
+    this.pipeThroughExtensions('incoming', message, null, function(message) {
+      if (!message) return;
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
   disable: function(feature) {
     this._disabled.push(feature);
   },
 
+<<<<<<< HEAD
   setHeader: function(name, value) {
     this.headers[name] = value;
   },
@@ -1516,6 +1722,34 @@ Faye.Dispatcher = Faye.Class({
 
   getConnectionTypes: function() {
     return Faye.Transport.getConnectionTypes();
+=======
+      if (callback) callback[0].call(callback[1], message);
+    }, this);
+
+    if (this._transportUp === true) return;
+    this._transportUp = true;
+    this.trigger('transport:up');
+  },
+
+  messageError: function(messages, immediate) {
+    var retry = this._retry,
+        self  = this,
+        id, message, timeout;
+
+    for (var i = 0, n = messages.length; i < n; i++) {
+      message = messages[i];
+      id      = message.id;
+
+      if (immediate)
+        this._transportSend(message);
+      else
+        Faye.ENV.setTimeout(function() { self._transportSend(message) }, retry * 1000);
+    }
+
+    if (immediate || this._transportUp === false) return;
+    this._transportUp = false;
+    this.trigger('transport:down');
+>>>>>>> fixes to make it compatible with faye 1.0.0
   },
 
   selectTransport: function(transportTypes) {
@@ -1526,6 +1760,7 @@ Faye.Dispatcher = Faye.Class({
       if (this._transport) this._transport.close();
 
       this._transport = transport;
+<<<<<<< HEAD
       this.connectionType = transport.connectionType;
     }, this);
   },
@@ -1567,6 +1802,33 @@ Faye.Dispatcher = Faye.Class({
 
     scheduler.send();
     envelope.request = this._transport.sendMessage(message);
+=======
+    }, this);
+  },
+
+  _send: function(message, callback, context) {
+    if (!this._transport) return;
+    message.id = message.id || this._generateMessageId();
+
+    this.pipeThroughExtensions('outgoing', message, null, function(message) {
+      if (!message) return;
+      if (callback) this._responseCallbacks[message.id] = [callback, context];
+      this._transportSend(message);
+    }, this);
+  },
+
+  _transportSend: function(message) {
+    if (!this._transport) return;
+
+    var timeout  = 1.2 * (this._advice.timeout || this._retry * 1000),
+        envelope = new Faye.Envelope(message, timeout);
+
+    envelope.errback(function(immediate) {
+      this.messageError([message], immediate);
+    }, this);
+
+    this._transport.send(envelope);
+>>>>>>> fixes to make it compatible with faye 1.0.0
   },
 
   handleResponse: function(reply) {
@@ -1635,6 +1897,7 @@ Faye.extend(Faye.Scheduler.prototype, {
     return this.options.interval;
   },
 
+<<<<<<< HEAD
   isDeliverable: function() {
     var attempts = this.options.attempts,
         made     = this.attempts,
@@ -1653,11 +1916,23 @@ Faye.extend(Faye.Scheduler.prototype, {
   send: function() {
     this.attempts += 1;
   },
+=======
+  _cycleConnection: function() {
+    if (this._connectRequest) {
+      this._connectRequest = null;
+      this.info('Closed connection for ?', this._clientId);
+    }
+    var self = this;
+    Faye.ENV.setTimeout(function() { self.connect() }, this._advice.interval);
+  }
+});
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
   succeed: function() {},
 
   fail: function() {},
 
+<<<<<<< HEAD
   abort: function() {}
 });
 
@@ -1666,6 +1941,10 @@ Faye.Transport = Faye.extend(Faye.Class({
   SECURE_PROTOCOLS: ['https:', 'wss:'],
   MAX_DELAY:        0,
 
+=======
+Faye.Transport = Faye.extend(Faye.Class({
+  MAX_DELAY: 0,
+>>>>>>> fixes to make it compatible with faye 1.0.0
   batching:  true,
 
   initialize: function(dispatcher, endpoint) {
@@ -1683,6 +1962,7 @@ Faye.Transport = Faye.extend(Faye.Class({
 
   close: function() {},
 
+<<<<<<< HEAD
   encode: function(messages) {
     return '';
   },
@@ -1696,6 +1976,21 @@ Faye.Transport = Faye.extend(Faye.Class({
     this._outbox.push(message);
     this._flushLargeBatch();
     this._promise = this._promise || new Faye.Promise();
+=======
+  encode: function(envelopes) {
+    return '';
+  },
+
+  send: function(envelope) {
+    var message = envelope.message;
+
+    this.debug('Client ? sending message to ?: ?',
+               this._client._clientId, Faye.URI.stringify(this.endpoint), message);
+
+    if (!this.batching) return this.request([envelope]);
+
+    this._outbox.push(envelope);
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
     if (message.channel === Faye.Channel.HANDSHAKE) {
       this.addTimeout('publish', 0.01, this._flush, this);
@@ -1705,8 +2000,13 @@ Faye.Transport = Faye.extend(Faye.Class({
     if (message.channel === Faye.Channel.CONNECT)
       this._connectMessage = message;
 
+<<<<<<< HEAD
     this.addTimeout('publish', this.MAX_DELAY, this._flush, this);
     return this._promise;
+=======
+    this.flushLargeBatch();
+    this.addTimeout('publish', this.MAX_DELAY, this.flush, this);
+>>>>>>> fixes to make it compatible with faye 1.0.0
   },
 
   _flush: function() {
@@ -1715,13 +2015,18 @@ Faye.Transport = Faye.extend(Faye.Class({
     if (this._outbox.length > 1 && this._connectMessage)
       this._connectMessage.advice = {timeout: 0};
 
+<<<<<<< HEAD
     Faye.Promise.fulfill(this._promise, this.request(this._outbox));
     delete this._promise;
+=======
+    this.request(this._outbox);
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
     this._connectMessage = null;
     this._outbox = [];
   },
 
+<<<<<<< HEAD
   _flushLargeBatch: function() {
     var string = this.encode(this._outbox);
     if (string.length < this._dispatcher.maxRequestSize) return;
@@ -1773,12 +2078,65 @@ Faye.Transport = Faye.extend(Faye.Class({
     for (var i = 0, n = setCookie.length; i < n; i++) {
       cookie = Faye.Cookies.Cookie.parse(setCookie[i]);
       cookies.setCookieSync(cookie, url);
+=======
+  flushLargeBatch: function() {
+    var string = this.encode(this._outbox);
+    if (string.length < this._client.maxRequestSize) return;
+    var last = this._outbox.pop();
+    this.flush();
+    if (last) this._outbox.push(last);
+  },
+
+  receive: function(envelopes, responses) {
+    var n = envelopes.length;
+    while (n--) envelopes[n].setDeferredStatus('succeeded');
+
+    responses = [].concat(responses);
+
+    this.debug('Client ? received from ?: ?',
+               this._client._clientId, Faye.URI.stringify(this.endpoint), responses);
+
+    for (var i = 0, n = responses.length; i < n; i++)
+      this._client.receiveMessage(responses[i]);
+  },
+
+  handleError: function(envelopes, immediate) {
+    var n = envelopes.length;
+    while (n--) envelopes[n].setDeferredStatus('failed', immediate);
+  },
+
+  _getCookies: function() {
+    var cookies = this._client.cookies;
+    if (!cookies) return '';
+
+    return cookies.getCookies({
+      domain: this.endpoint.hostname,
+      path:   this.endpoint.path,
+      secure: this.endpoint.protocol === 'https:'
+    }).toValueString();
+  },
+
+  _storeCookies: function(setCookie) {
+    if (!setCookie || !this._client.cookies) return;
+    setCookie = [].concat(setCookie);
+    var cookie;
+
+    for (var i = 0, n = setCookie.length; i < n; i++) {
+      cookie = this._client.cookies.setCookie(setCookie[i]);
+      cookie = cookie[0] || cookie;
+      cookie.domain = cookie.domain || this.endpoint.hostname;
+>>>>>>> fixes to make it compatible with faye 1.0.0
     }
   }
 
 }), {
+<<<<<<< HEAD
   get: function(dispatcher, allowed, disabled, callback, context) {
     var endpoint = dispatcher.endpoint;
+=======
+  get: function(client, allowed, disabled, callback, context) {
+    var endpoint = client.endpoint;
+>>>>>>> fixes to make it compatible with faye 1.0.0
 
     Faye.asyncEach(this._transports, function(pair, resume) {
       var connType     = pair[0], klass = pair[1],
@@ -2362,6 +2720,7 @@ Faye.Transport.WebSocket = Faye.extend(Faye.Class(Faye.Transport, {
     this.connect();
   },
 
+<<<<<<< HEAD
   request: function(messages) {
     this._pending = this._pending || new Faye.Set();
     for (var i = 0, n = messages.length; i < n; i++) this._pending.add(messages[i]);
@@ -2374,13 +2733,25 @@ Faye.Transport.WebSocket = Faye.extend(Faye.Class(Faye.Transport, {
       Faye.Promise.fulfill(promise, socket);
     }, this);
 
+=======
+  request: function(envelopes) {
+    this.callback(function(socket) {
+      if (!socket) return;
+      for (var i = 0, n = envelopes.length; i < n; i++) this._pending.add(envelopes[i]);
+      var messages = Faye.map(envelopes, function(e) { return e.message });
+      socket.send(Faye.toJSON(messages));
+    }, this);
+>>>>>>> fixes to make it compatible with faye 1.0.0
     this.connect();
 
+<<<<<<< HEAD
     return {
       abort: function() { promise.then(function(ws) { ws.close() }) }
     };
   },
 
+=======
+>>>>>>> fixes to make it compatible with faye 1.0.0
   connect: function() {
     if (Faye.Transport.WebSocket._unloaded) return;
 
@@ -2396,6 +2767,10 @@ Faye.Transport.WebSocket = Faye.extend(Faye.Class(Faye.Transport, {
     socket.onopen = function() {
       if (socket.headers) self._storeCookies(socket.headers['set-cookie']);
       self._socket = socket;
+<<<<<<< HEAD
+=======
+      self._pending = new Faye.Set();
+>>>>>>> fixes to make it compatible with faye 1.0.0
       self._state = self.CONNECTED;
       self._everConnected = true;
       self._ping();
@@ -2406,6 +2781,7 @@ Faye.Transport.WebSocket = Faye.extend(Faye.Class(Faye.Transport, {
     socket.onclose = socket.onerror = function() {
       if (closed) return;
       closed = true;
+<<<<<<< HEAD
 
       var wasConnected = (self._state === self.CONNECTED);
       socket.onopen = socket.onclose = socket.onerror = socket.onmessage = null;
@@ -2465,6 +2841,66 @@ Faye.Transport.WebSocket = Faye.extend(Faye.Class(Faye.Transport, {
     if (!this._socket) return;
     this._socket.send('[]');
     this.addTimeout('ping', this._dispatcher.timeout / 2, this._ping, this);
+=======
+
+      var wasConnected = (self._state === self.CONNECTED);
+      socket.onopen = socket.onclose = socket.onerror = socket.onmessage = null;
+
+      delete self._socket;
+      self._state = self.UNCONNECTED;
+      self.removeTimeout('ping');
+      self.setDeferredStatus('unknown');
+
+      var pending = self._pending ? self._pending.toArray() : [];
+      delete self._pending;
+
+      if (wasConnected) {
+        self.handleError(pending, true);
+      } else if (self._everConnected) {
+        self.handleError(pending);
+      } else {
+        self.setDeferredStatus('failed');
+      }
+    };
+
+    socket.onmessage = function(event) {
+      var messages  = JSON.parse(event.data),
+          envelopes = [],
+          envelope;
+
+      if (!messages) return;
+      messages = [].concat(messages);
+
+      for (var i = 0, n = messages.length; i < n; i++) {
+        if (messages[i].successful === undefined) continue;
+        envelope = self._pending.remove(messages[i]);
+        if (envelope) envelopes.push(envelope);
+      }
+      self.receive(envelopes, messages);
+    };
+  },
+
+  close: function() {
+    if (!this._socket) return;
+    this._socket.close();
+  },
+
+  _createSocket: function() {
+    var url     = Faye.Transport.WebSocket.getSocketUrl(this.endpoint),
+        options = {headers: Faye.copyObject(this._client.headers), ca: this._client.ca};
+
+    options.headers['Cookie'] = this._getCookies();
+
+    if (Faye.WebSocket)        return new Faye.WebSocket.Client(url, [], options);
+    if (Faye.ENV.MozWebSocket) return new MozWebSocket(url);
+    if (Faye.ENV.WebSocket)    return new WebSocket(url);
+  },
+
+  _ping: function() {
+    if (!this._socket) return;
+    this._socket.send('[]');
+    this.addTimeout('ping', this._client._advice.timeout/2000, this._ping, this);
+>>>>>>> fixes to make it compatible with faye 1.0.0
   }
 
 }), {
@@ -2473,9 +2909,15 @@ Faye.Transport.WebSocket = Faye.extend(Faye.Class(Faye.Transport, {
     'https:': 'wss:'
   },
 
+<<<<<<< HEAD
   create: function(dispatcher, endpoint) {
     var sockets = dispatcher.transports.websocket = dispatcher.transports.websocket || {};
     sockets[endpoint.href] = sockets[endpoint.href] || new this(dispatcher, endpoint);
+=======
+  create: function(client, endpoint) {
+    var sockets = client.transports.websocket = client.transports.websocket || {};
+    sockets[endpoint.href] = sockets[endpoint.href] || new this(client, endpoint);
+>>>>>>> fixes to make it compatible with faye 1.0.0
     return sockets[endpoint.href];
   },
 
@@ -2485,8 +2927,13 @@ Faye.Transport.WebSocket = Faye.extend(Faye.Class(Faye.Transport, {
     return Faye.URI.stringify(endpoint);
   },
 
+<<<<<<< HEAD
   isUsable: function(dispatcher, endpoint, callback, context) {
     this.create(dispatcher, endpoint).isUsable(callback, context);
+=======
+  isUsable: function(client, endpoint, callback, context) {
+    this.create(client, endpoint).isUsable(callback, context);
+>>>>>>> fixes to make it compatible with faye 1.0.0
   }
 });
 
@@ -2508,6 +2955,12 @@ Faye.Transport.EventSource = Faye.extend(Faye.Class(Faye.Transport, {
     endpoint = Faye.copyObject(endpoint);
     endpoint.pathname += '/' + dispatcher.clientId;
 
+<<<<<<< HEAD
+=======
+    endpoint = Faye.copyObject(endpoint);
+    endpoint.pathname += '/' + client._clientId;
+
+>>>>>>> fixes to make it compatible with faye 1.0.0
     var socket = new EventSource(Faye.URI.stringify(endpoint)),
         self   = this;
 
@@ -2518,7 +2971,11 @@ Faye.Transport.EventSource = Faye.extend(Faye.Class(Faye.Transport, {
 
     socket.onerror = function() {
       if (self._everConnected) {
+<<<<<<< HEAD
         self._handleError([]);
+=======
+        self._client.messageError([]);
+>>>>>>> fixes to make it compatible with faye 1.0.0
       } else {
         self.setDeferredStatus('failed');
         socket.close();
@@ -2526,7 +2983,11 @@ Faye.Transport.EventSource = Faye.extend(Faye.Class(Faye.Transport, {
     };
 
     socket.onmessage = function(event) {
+<<<<<<< HEAD
       self._receive(JSON.parse(event.data));
+=======
+      self.receive([], JSON.parse(event.data));
+>>>>>>> fixes to make it compatible with faye 1.0.0
     };
 
     this._socket = socket;
@@ -2544,6 +3005,7 @@ Faye.Transport.EventSource = Faye.extend(Faye.Class(Faye.Transport, {
     this.errback(function() { callback.call(context, false) });
   },
 
+<<<<<<< HEAD
   encode: function(messages) {
     return this._xhr.encode(messages);
   },
@@ -2555,6 +3017,19 @@ Faye.Transport.EventSource = Faye.extend(Faye.Class(Faye.Transport, {
 }), {
   isUsable: function(dispatcher, endpoint, callback, context) {
     var id = dispatcher.clientId;
+=======
+  encode: function(envelopes) {
+    return this._xhr.encode(envelopes);
+  },
+
+  request: function(envelopes) {
+    this._xhr.request(envelopes);
+  }
+
+}), {
+  isUsable: function(client, endpoint, callback, context) {
+    var id = client._clientId;
+>>>>>>> fixes to make it compatible with faye 1.0.0
     if (!id) return callback.call(context, false);
 
     Faye.Transport.XHR.isUsable(dispatcher, endpoint, function(usable) {
@@ -2563,6 +3038,7 @@ Faye.Transport.EventSource = Faye.extend(Faye.Class(Faye.Transport, {
     }, this);
   },
 
+<<<<<<< HEAD
   create: function(dispatcher, endpoint) {
     var sockets = dispatcher.transports.eventsource = dispatcher.transports.eventsource || {},
         id      = dispatcher.clientId;
@@ -2572,6 +3048,17 @@ Faye.Transport.EventSource = Faye.extend(Faye.Class(Faye.Transport, {
     url = Faye.URI.stringify(url);
 
     sockets[url] = sockets[url] || new this(dispatcher, endpoint);
+=======
+  create: function(client, endpoint) {
+    var sockets = client.transports.eventsource = client.transports.eventsource || {},
+        id      = client._clientId;
+
+    endpoint = Faye.copyObject(endpoint);
+    endpoint.pathname += '/' + (id || '');
+    var url = Faye.URI.stringify(endpoint);
+
+    sockets[url] = sockets[url] || new this(client, endpoint);
+>>>>>>> fixes to make it compatible with faye 1.0.0
     return sockets[url];
   }
 });
@@ -2580,6 +3067,7 @@ Faye.extend(Faye.Transport.EventSource.prototype, Faye.Deferrable);
 Faye.Transport.register('eventsource', Faye.Transport.EventSource);
 
 Faye.Transport.XHR = Faye.extend(Faye.Class(Faye.Transport, {
+<<<<<<< HEAD
   encode: function(messages) {
     return Faye.toJSON(messages);
   },
@@ -2590,11 +3078,28 @@ Faye.Transport.XHR = Faye.extend(Faye.Class(Faye.Transport, {
         self = this;
 
     xhr.open('POST', href, true);
+=======
+  encode: function(envelopes) {
+    var messages = Faye.map(envelopes, function(e) { return e.message });
+    return Faye.toJSON(messages);
+  },
+
+  request: function(envelopes) {
+    var path = this.endpoint.path,
+        xhr  = Faye.ENV.ActiveXObject ? new ActiveXObject('Microsoft.XMLHTTP') : new XMLHttpRequest(),
+        self = this;
+
+    xhr.open('POST', path, true);
+>>>>>>> fixes to make it compatible with faye 1.0.0
     xhr.setRequestHeader('Content-Type', 'application/json');
     xhr.setRequestHeader('Pragma', 'no-cache');
     xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
 
+<<<<<<< HEAD
     var headers = this._dispatcher.headers;
+=======
+    var headers = this._client.headers;
+>>>>>>> fixes to make it compatible with faye 1.0.0
     for (var key in headers) {
       if (!headers.hasOwnProperty(key)) continue;
       xhr.setRequestHeader(key, headers[key]);
@@ -2606,6 +3111,7 @@ Faye.Transport.XHR = Faye.extend(Faye.Class(Faye.Transport, {
     xhr.onreadystatechange = function() {
       if (!xhr || xhr.readyState !== 4) return;
 
+<<<<<<< HEAD
       var replies    = null,
           status     = xhr.status,
           text       = xhr.responseText,
@@ -2632,6 +3138,33 @@ Faye.Transport.XHR = Faye.extend(Faye.Class(Faye.Transport, {
   }
 }), {
   isUsable: function(dispatcher, endpoint, callback, context) {
+=======
+      var parsedMessage = null,
+          status        = xhr.status,
+          text          = xhr.responseText,
+          successful    = (status >= 200 && status < 300) || status === 304 || status === 1223;
+
+      Faye.Event.detach(Faye.ENV, 'beforeunload', abort);
+      xhr.onreadystatechange = function() {};
+      xhr = null;
+
+      if (!successful) return self.handleError(envelopes);
+
+      try {
+        parsedMessage = JSON.parse(text);
+      } catch (e) {}
+
+      if (parsedMessage)
+        self.receive(envelopes, parsedMessage);
+      else
+        self.handleError(envelopes);
+    };
+
+    xhr.send(this.encode(envelopes));
+  }
+}), {
+  isUsable: function(client, endpoint, callback, context) {
+>>>>>>> fixes to make it compatible with faye 1.0.0
     callback.call(context, Faye.URI.isSameOrigin(endpoint));
   }
 });
@@ -2639,6 +3172,7 @@ Faye.Transport.XHR = Faye.extend(Faye.Class(Faye.Transport, {
 Faye.Transport.register('long-polling', Faye.Transport.XHR);
 
 Faye.Transport.CORS = Faye.extend(Faye.Class(Faye.Transport, {
+<<<<<<< HEAD
   encode: function(messages) {
     return 'message=' + encodeURIComponent(Faye.toJSON(messages));
   },
@@ -2652,6 +3186,22 @@ Faye.Transport.CORS = Faye.extend(Faye.Class(Faye.Transport, {
 
     xhr.open('POST', Faye.URI.stringify(this.endpoint), true);
 
+=======
+  encode: function(envelopes) {
+    var messages = Faye.map(envelopes, function(e) { return e.message });
+    return 'message=' + encodeURIComponent(Faye.toJSON(messages));
+  },
+
+  request: function(envelopes) {
+    var xhrClass = Faye.ENV.XDomainRequest ? XDomainRequest : XMLHttpRequest,
+        xhr      = new xhrClass(),
+        headers  = this._client.headers,
+        self     = this,
+        key;
+
+    xhr.open('POST', Faye.URI.stringify(this.endpoint), true);
+
+>>>>>>> fixes to make it compatible with faye 1.0.0
     if (xhr.setRequestHeader) {
       xhr.setRequestHeader('Pragma', 'no-cache');
       for (key in headers) {
@@ -2674,14 +3224,22 @@ Faye.Transport.CORS = Faye.extend(Faye.Class(Faye.Transport, {
 
       cleanUp();
 
+<<<<<<< HEAD
       if (replies)
         self._receive(replies);
       else
         self._handleError(messages);
+=======
+      if (parsedMessage)
+        self.receive(envelopes, parsedMessage);
+      else
+        self.handleError(envelopes);
+>>>>>>> fixes to make it compatible with faye 1.0.0
     };
 
     xhr.onerror = xhr.ontimeout = function() {
       cleanUp();
+<<<<<<< HEAD
       self._handleError(messages);
     };
 
@@ -2691,6 +3249,16 @@ Faye.Transport.CORS = Faye.extend(Faye.Class(Faye.Transport, {
   }
 }), {
   isUsable: function(dispatcher, endpoint, callback, context) {
+=======
+      self.handleError(envelopes);
+    };
+
+    xhr.onprogress = function() {};
+    xhr.send(this.encode(envelopes));
+  }
+}), {
+  isUsable: function(client, endpoint, callback, context) {
+>>>>>>> fixes to make it compatible with faye 1.0.0
     if (Faye.URI.isSameOrigin(endpoint))
       return callback.call(context, false);
 
@@ -2708,15 +3276,26 @@ Faye.Transport.CORS = Faye.extend(Faye.Class(Faye.Transport, {
 Faye.Transport.register('cross-origin-long-polling', Faye.Transport.CORS);
 
 Faye.Transport.JSONP = Faye.extend(Faye.Class(Faye.Transport, {
+<<<<<<< HEAD
  encode: function(messages) {
+=======
+ encode: function(envelopes) {
+    var messages = Faye.map(envelopes, function(e) { return e.message });
+>>>>>>> fixes to make it compatible with faye 1.0.0
     var url = Faye.copyObject(this.endpoint);
     url.query.message = Faye.toJSON(messages);
     url.query.jsonp   = '__jsonp' + Faye.Transport.JSONP._cbCount + '__';
     return Faye.URI.stringify(url);
   },
 
+<<<<<<< HEAD
   request: function(messages) {
     var head         = document.getElementsByTagName('head')[0],
+=======
+  request: function(envelopes) {
+    var messages     = Faye.map(envelopes, function(e) { return e.message }),
+        head         = document.getElementsByTagName('head')[0],
+>>>>>>> fixes to make it compatible with faye 1.0.0
         script       = document.createElement('script'),
         callbackName = Faye.Transport.JSONP.getCallbackName(),
         endpoint     = Faye.copyObject(this.endpoint),
@@ -2725,11 +3304,16 @@ Faye.Transport.JSONP = Faye.extend(Faye.Class(Faye.Transport, {
     endpoint.query.message = Faye.toJSON(messages);
     endpoint.query.jsonp   = callbackName;
 
+<<<<<<< HEAD
     var cleanup = function() {
+=======
+    Faye.ENV[callbackName] = function(data) {
+>>>>>>> fixes to make it compatible with faye 1.0.0
       if (!Faye.ENV[callbackName]) return false;
       Faye.ENV[callbackName] = undefined;
       try { delete Faye.ENV[callbackName] } catch (e) {}
       script.parentNode.removeChild(script);
+<<<<<<< HEAD
     };
 
     Faye.ENV[callbackName] = function(replies) {
@@ -2737,6 +3321,11 @@ Faye.Transport.JSONP = Faye.extend(Faye.Class(Faye.Transport, {
       self._receive(replies);
     };
 
+=======
+      self.receive(envelopes, data);
+    };
+
+>>>>>>> fixes to make it compatible with faye 1.0.0
     script.type = 'text/javascript';
     script.src  = Faye.URI.stringify(endpoint);
     head.appendChild(script);
@@ -2763,5 +3352,9 @@ Faye.Transport.JSONP = Faye.extend(Faye.Class(Faye.Transport, {
 
 Faye.Transport.register('callback-polling', Faye.Transport.JSONP);
 
+<<<<<<< HEAD
 })();
 })(this);
+=======
+})();
+>>>>>>> fixes to make it compatible with faye 1.0.0
